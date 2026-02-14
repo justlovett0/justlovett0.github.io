@@ -1,10 +1,1590 @@
-# OuraHealth-HTML
-A simple single page HTML file to upload OURA ring data to view without a subscription.
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Data Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-<img width="1322" height="500" alt="Blank Page" src="https://github.com/user-attachments/assets/5105a6be-3369-4026-81ca-e280c0879b33" />
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 10px;
+        }
 
-Download the HTML file, open it in a browser, and upload the heartrate.csv and sleepmodel.csv to view your data.
+        @media (min-width: 768px) {
+            body {
+                padding: 20px;
+            }
+        }
 
-<img width="766" height="591" alt="Files Needed" src="https://github.com/user-attachments/assets/71675ab3-d7cc-4c18-9243-e4a1ce5f2c5f" />
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
 
-<img width="636" height="925" alt="Example with Data" src="https://github.com/user-attachments/assets/e27a003d-7227-4306-833c-82300cc863f7" />
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        @media (min-width: 768px) {
+            .header {
+                padding: 30px;
+            }
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+        }
+
+        @media (min-width: 768px) {
+            .header h1 {
+                font-size: 2.5em;
+                margin-bottom: 10px;
+            }
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.95em;
+        }
+
+        @media (min-width: 768px) {
+            .header p {
+                font-size: 1.1em;
+            }
+        }
+
+        .upload-section {
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        @media (min-width: 768px) {
+            .upload-section {
+                padding: 40px;
+            }
+        }
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .upload-grid {
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 30px;
+            }
+        }
+
+        .upload-box {
+            background: white;
+            border: 3px dashed #667eea;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        @media (min-width: 768px) {
+            .upload-box {
+                padding: 30px;
+            }
+        }
+
+        .upload-box:hover {
+            border-color: #764ba2;
+            background: #f8f9ff;
+        }
+
+        .upload-box h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        @media (min-width: 768px) {
+            .upload-box h3 {
+                font-size: 1.3em;
+            }
+        }
+
+        .upload-icon {
+            font-size: 2em;
+            margin-bottom: 12px;
+        }
+
+        @media (min-width: 768px) {
+            .upload-icon {
+                font-size: 2.5em;
+                margin-bottom: 15px;
+            }
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .upload-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+            border: none;
+        }
+
+        @media (min-width: 768px) {
+            .upload-button {
+                padding: 12px 30px;
+                font-size: 1em;
+            }
+        }
+
+        .upload-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .file-name {
+            margin-top: 10px;
+            color: #666;
+            font-size: 0.85em;
+            word-break: break-word;
+        }
+
+        @media (min-width: 768px) {
+            .file-name {
+                font-size: 0.9em;
+            }
+        }
+
+        /* Heart Rate Section */
+        .heart-rate-section {
+            display: none;
+            padding: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .heart-rate-section {
+                padding: 40px;
+            }
+        }
+
+        .heart-rate-section.active {
+            display: block;
+        }
+
+        .section-title {
+            color: #667eea;
+            font-size: 1.4em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        @media (min-width: 768px) {
+            .section-title {
+                font-size: 1.8em;
+            }
+        }
+
+        .stats-section {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        @media (min-width: 480px) {
+            .stats-section {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 768px) {
+            .stats-section {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+        }
+
+        .stat-card {
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        @media (min-width: 768px) {
+            .stat-card {
+                padding: 20px;
+            }
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        @media (min-width: 768px) {
+            .stat-label {
+                font-size: 0.9em;
+            }
+        }
+
+        .stat-value {
+            color: #667eea;
+            font-size: 1.6em;
+            font-weight: bold;
+        }
+
+        @media (min-width: 768px) {
+            .stat-value {
+                font-size: 2em;
+            }
+        }
+
+        .stat-unit {
+            color: #999;
+            font-size: 0.8em;
+            margin-left: 4px;
+        }
+
+        .chart-controls {
+            text-align: center;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        @media (min-width: 768px) {
+            .chart-controls {
+                margin-bottom: 20px;
+                padding: 15px;
+            }
+        }
+
+        .chart-controls p {
+            color: #666;
+            margin-bottom: 8px;
+            font-size: 0.85em;
+        }
+
+        @media (min-width: 768px) {
+            .chart-controls p {
+                margin-bottom: 10px;
+                font-size: 0.9em;
+            }
+        }
+
+        .reset-zoom-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+
+        @media (min-width: 768px) {
+            .reset-zoom-btn {
+                padding: 10px 24px;
+                font-size: 0.95em;
+            }
+        }
+
+        .reset-zoom-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 500px;
+                padding: 20px;
+            }
+        }
+
+        /* Sleep Section */
+        .sleep-section {
+            display: none;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        @media (min-width: 768px) {
+            .sleep-section {
+                padding: 40px;
+            }
+        }
+
+        .sleep-section.active {
+            display: block;
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+
+        @media (min-width: 768px) {
+            .navigation {
+                margin-bottom: 30px;
+            }
+        }
+
+        .nav-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+            white-space: nowrap;
+        }
+
+        @media (min-width: 768px) {
+            .nav-button {
+                padding: 12px 24px;
+                font-size: 16px;
+            }
+        }
+
+        .nav-button:hover:not(:disabled) {
+            transform: scale(1.05);
+        }
+
+        .nav-button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .date-display {
+            font-size: 1em;
+            font-weight: 700;
+            color: #333;
+            text-align: center;
+            flex-shrink: 1;
+            min-width: 0;
+        }
+
+        @media (min-width: 768px) {
+            .date-display {
+                font-size: 1.5em;
+            }
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        @media (min-width: 480px) {
+            .metrics-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 768px) {
+            .metrics-grid {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+        }
+
+        .metric-card {
+            background: white;
+            padding: 16px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (min-width: 768px) {
+            .metric-card {
+                padding: 20px;
+            }
+        }
+
+        .metric-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #666;
+            font-weight: 600;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        @media (min-width: 768px) {
+            .metric-label {
+                font-size: 12px;
+            }
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        @media (min-width: 768px) {
+            .metric-value {
+                font-size: 28px;
+            }
+        }
+
+        .metric-unit {
+            font-size: 13px;
+            color: #999;
+            margin-left: 4px;
+        }
+
+        @media (min-width: 768px) {
+            .metric-unit {
+                font-size: 14px;
+            }
+        }
+
+        .sleep-stages {
+            padding: 0;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 0 3px transparent;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 3px;
+        }
+
+        .sleep-stages-inner {
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+        }
+
+        .sleep-stages h2 {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 20px;
+            margin: 0;
+            font-size: 18px;
+        }
+
+        @media (min-width: 768px) {
+            .sleep-stages h2 {
+                padding: 20px 25px;
+                font-size: 20px;
+            }
+        }
+
+        .stage-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            color: white;
+        }
+
+        @media (min-width: 768px) {
+            .stage-row {
+                padding: 20px 25px;
+            }
+        }
+
+        .stage-row:first-of-type {
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%); /* Dark blue for Deep Sleep */
+        }
+
+        .stage-row:nth-of-type(2) {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); /* Medium blue for REM Sleep */
+        }
+
+        .stage-row:nth-of-type(3) {
+            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%); /* Light blue for Light Sleep */
+        }
+
+        .stage-name {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        @media (min-width: 768px) {
+            .stage-name {
+                font-size: 16px;
+            }
+        }
+
+        .stage-value {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        @media (min-width: 768px) {
+            .stage-value {
+                gap: 15px;
+            }
+        }
+
+        .stage-time {
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        @media (min-width: 768px) {
+            .stage-time {
+                font-size: 18px;
+            }
+        }
+
+        .stage-percentage {
+            background: rgba(255, 255, 255, 0.3);
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        @media (min-width: 768px) {
+            .stage-percentage {
+                padding: 4px 12px;
+                font-size: 14px;
+            }
+        }
+
+        .time-summary {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .time-summary {
+                grid-template-columns: 1fr 1fr;
+                margin-top: 30px;
+            }
+        }
+
+        .time-card {
+            background: white;
+            padding: 16px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        @media (min-width: 768px) {
+            .time-card {
+                padding: 20px;
+            }
+        }
+
+        .time-card h3 {
+            font-size: 13px;
+            margin-bottom: 10px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        @media (min-width: 768px) {
+            .time-card h3 {
+                font-size: 14px;
+            }
+        }
+
+        .time-card .time {
+            font-size: 26px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        @media (min-width: 768px) {
+            .time-card .time {
+                font-size: 32px;
+            }
+        }
+
+        .error-message {
+            background: #fee;
+            color: #c33;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+            display: none;
+            font-size: 0.9em;
+        }
+
+        @media (min-width: 768px) {
+            .error-message {
+                padding: 15px;
+                margin-top: 15px;
+            }
+        }
+
+        .error-message.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ðŸ’“ Health Data Tracker ðŸ’¤</h1>
+            <p>Monitor your heart rate and sleep patterns</p>
+        </div>
+
+        <div class="upload-section">
+            <div class="upload-grid">
+                <div class="upload-box">
+                    <div class="upload-icon">ðŸ’“</div>
+                    <h3>Heart Rate Data</h3>
+                    <input type="file" id="heartrateFile" accept=".csv">
+                    <label for="heartrateFile" class="upload-button">
+                        Choose heartrate.csv
+                    </label>
+                    <div class="file-name" id="heartrateFileName"></div>
+                    <div class="error-message" id="heartrateError"></div>
+                </div>
+
+                <div class="upload-box">
+                    <div class="upload-icon">ðŸ’¤</div>
+                    <h3>Sleep Data</h3>
+                    <input type="file" id="sleepFile" accept=".csv">
+                    <label for="sleepFile" class="upload-button">
+                        Choose sleepmodel.csv
+                    </label>
+                    <div class="file-name" id="sleepFileName"></div>
+                    <div class="error-message" id="sleepError"></div>
+                </div>
+
+                <div class="upload-box">
+                    <div class="upload-icon">ðŸ“¦</div>
+                    <h3>Upload ZIP File</h3>
+                    <input type="file" id="zipFile" accept=".zip">
+                    <label for="zipFile" class="upload-button">
+                        Choose ZIP File
+                    </label>
+                    <div class="file-name" id="zipFileName"></div>
+                    <div class="error-message" id="zipError"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Heart Rate Section -->
+        <div class="heart-rate-section" id="heartRateSection">
+            <h2 class="section-title">Heart Rate - Last 7 Days</h2>
+            
+            <div class="stats-section" id="heartRateStats"></div>
+
+            <div class="chart-controls" id="chartControls" style="display: none;">
+                <p>Scroll to zoom â€¢ Drag to pan</p>
+                <button class="reset-zoom-btn" onclick="resetZoom()">Reset Zoom</button>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="heartRateChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Sleep Section -->
+        <div class="sleep-section" id="sleepSection">
+            <h2 class="section-title">Sleep Analysis (Last 10 Days)</h2>
+
+            <div class="navigation">
+                <button class="nav-button" id="prevBtn" onclick="previousDay()">â† Previous</button>
+                <div class="date-display" id="dateDisplay"></div>
+                <button class="nav-button" id="nextBtn" onclick="nextDay()">Next â†’</button>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Avg Breaths/Min</div>
+                    <div class="metric-value" id="avgBreath">--</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Avg Heart Rate</div>
+                    <div class="metric-value" id="avgHeartRate">--<span class="metric-unit">bpm</span></div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Lowest Heart Rate</div>
+                    <div class="metric-value" id="lowestHeartRate">--<span class="metric-unit">bpm</span></div>
+                </div>
+            </div>
+
+            <div class="time-summary">
+                <div class="time-card">
+                    <h3>Bedtime</h3>
+                    <div class="time" id="bedtimeStart">--</div>
+                    <div style="margin-top: 5px; font-size: 12px; color: #999;">to</div>
+                    <div class="time" id="bedtimeEnd">--</div>
+                </div>
+                <div class="time-card">
+                    <h3>Sleep Duration</h3>
+                    <div class="time" id="timeInBed">--</div>
+                    <div style="margin-top: 5px; font-size: 14px; color: #999;">In Bed</div>
+                    <div class="time" style="font-size: 24px; margin-top: 8px;" id="totalSleep">--</div>
+                    <div style="font-size: 12px; color: #999;">Actually Asleep</div>
+                </div>
+            </div>
+
+            <div class="time-card" id="sleepDebtCard" style="margin-top: 20px; display: none;">
+                <h3>Sleep Debt (7-Day Average)</h3>
+                <div class="time" id="sleepDebt" style="color: #e53e3e;">--</div>
+                <div style="font-size: 12px; color: #999; margin-top: 5px;">Below 8h/night target</div>
+            </div>
+
+            <div class="sleep-stages" style="margin-top: 30px;">
+                <div class="sleep-stages-inner">
+                    <h2>Sleep Stages</h2>
+                    <div class="stage-row">
+                        <div class="stage-name">ðŸŒŠ Deep Sleep</div>
+                        <div class="stage-value">
+                            <span class="stage-time" id="deepSleep">--</span>
+                            <span class="stage-percentage" id="deepPercent">--%</span>
+                        </div>
+                    </div>
+                    <div class="stage-row">
+                        <div class="stage-name">ðŸ’­ REM Sleep</div>
+                        <div class="stage-value">
+                            <span class="stage-time" id="remSleep">--</span>
+                            <span class="stage-percentage" id="remPercent">--%</span>
+                        </div>
+                    </div>
+                    <div class="stage-row">
+                        <div class="stage-name">â˜ï¸ Light Sleep</div>
+                        <div class="stage-value">
+                            <span class="stage-time" id="lightSleep">--</span>
+                            <span class="stage-percentage" id="lightPercent">--%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let heartRateChart = null;
+        let sleepData = [];
+        let currentSleepIndex = 0;
+
+        // ===== HEART RATE FUNCTIONS =====
+
+        function parseHeartRateCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(';').map(h => h.trim());
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(';');
+                if (values.length >= 3) {
+                    const row = {};
+                    headers.forEach((header, index) => {
+                        row[header] = values[index] ? values[index].trim() : '';
+                    });
+                    data.push(row);
+                }
+            }
+
+            return data;
+        }
+
+        function processHeartRateData(data) {
+            const chartData = [];
+            const now = new Date();
+            const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
+
+            data.forEach(row => {
+                const timestamp = new Date(row['timestamp']);
+                if (timestamp >= sevenDaysAgo && timestamp <= now) {
+                    const bpm = parseFloat(row['bpm']);
+                    if (!isNaN(bpm) && bpm > 0) {
+                        chartData.push({
+                            x: timestamp,
+                            y: bpm,
+                            source: row['source'] || 'Unknown'
+                        });
+                    }
+                }
+            });
+
+            chartData.sort((a, b) => a.x - b.x);
+            return chartData;
+        }
+
+        function findRestPeriods(data) {
+            const restPeriods = [];
+            const minDuration = 15 * 60 * 1000;
+
+            let periodStart = null;
+            let lastTimestamp = null;
+
+            data.forEach((point, index) => {
+                if (point.source && point.source.toLowerCase() === 'rest') {
+                    if (!periodStart) {
+                        periodStart = point.x;
+                    }
+                    lastTimestamp = point.x;
+                } else {
+                    if (periodStart && lastTimestamp) {
+                        const duration = lastTimestamp - periodStart;
+                        if (duration >= minDuration) {
+                            restPeriods.push({
+                                start: new Date(periodStart),
+                                end: new Date(lastTimestamp)
+                            });
+                        }
+                    }
+                    periodStart = null;
+                    lastTimestamp = null;
+                }
+            });
+
+            if (periodStart && lastTimestamp) {
+                const duration = lastTimestamp - periodStart;
+                if (duration >= minDuration) {
+                    restPeriods.push({
+                        start: new Date(periodStart),
+                        end: new Date(lastTimestamp)
+                    });
+                }
+            }
+
+            return restPeriods;
+        }
+
+        function findWorkoutPeriods(data) {
+            const workoutPeriods = [];
+            const workoutThreshold = 110;
+            const minDuration = 10 * 60 * 1000;
+
+            let periodStart = null;
+            let lastTimestamp = null;
+
+            data.forEach((point) => {
+                if (point.y > workoutThreshold) {
+                    if (!periodStart) {
+                        periodStart = point.x;
+                    }
+                    lastTimestamp = point.x;
+                } else {
+                    if (periodStart && lastTimestamp) {
+                        const duration = lastTimestamp - periodStart;
+                        if (duration >= minDuration) {
+                            workoutPeriods.push({
+                                start: new Date(periodStart),
+                                end: new Date(lastTimestamp)
+                            });
+                        }
+                    }
+                    periodStart = null;
+                    lastTimestamp = null;
+                }
+            });
+
+            if (periodStart && lastTimestamp) {
+                const duration = lastTimestamp - periodStart;
+                if (duration >= minDuration) {
+                    workoutPeriods.push({
+                        start: new Date(periodStart),
+                        end: new Date(lastTimestamp)
+                    });
+                }
+            }
+
+            return workoutPeriods;
+        }
+
+        function displayHeartRateStats(data) {
+            const bpmValues = data.map(d => d.y);
+            const avgBpm = (bpmValues.reduce((a, b) => a + b, 0) / bpmValues.length).toFixed(0);
+            const maxBpm = Math.max(...bpmValues);
+            const minBpm = Math.min(...bpmValues);
+
+            const statsHtml = `
+                <div class="stat-card">
+                    <div class="stat-label">Average</div>
+                    <div class="stat-value">${avgBpm}<span class="stat-unit">bpm</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Maximum</div>
+                    <div class="stat-value">${maxBpm}<span class="stat-unit">bpm</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Minimum</div>
+                    <div class="stat-value">${minBpm}<span class="stat-unit">bpm</span></div>
+                </div>
+            `;
+
+            document.getElementById('heartRateStats').innerHTML = statsHtml;
+        }
+
+        function createHeartRateChart(chartData) {
+            const ctx = document.getElementById('heartRateChart').getContext('2d');
+
+            if (heartRateChart) {
+                heartRateChart.destroy();
+            }
+
+            const restPeriods = findRestPeriods(chartData);
+            const workoutPeriods = findWorkoutPeriods(chartData);
+
+            const annotations = {};
+
+            restPeriods.forEach((period, index) => {
+                annotations[`restPeriod${index}`] = {
+                    type: 'box',
+                    xMin: period.start.getTime(),
+                    xMax: period.end.getTime(),
+                    backgroundColor: 'rgba(100, 100, 100, 0.5)',
+                    borderWidth: 0,
+                    drawTime: 'beforeDatasetsDraw'
+                };
+            });
+
+            workoutPeriods.forEach((period, index) => {
+                annotations[`workoutPeriod${index}`] = {
+                    type: 'box',
+                    xMin: period.start.getTime(),
+                    xMax: period.end.getTime(),
+                    backgroundColor: 'rgba(144, 238, 144, 0.4)',
+                    borderWidth: 0,
+                    drawTime: 'beforeDatasetsDraw'
+                };
+            });
+
+            heartRateChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Heart Rate',
+                        data: chartData,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#667eea',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'nearest',
+                        intersect: false,
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Heart Rate Over Time',
+                            font: {
+                                size: 18,
+                                weight: 'bold'
+                            },
+                            padding: 20,
+                            color: '#667eea'
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            callbacks: {
+                                title: function(context) {
+                                    const date = new Date(context[0].parsed.x);
+                                    return date.toLocaleString();
+                                },
+                                label: function(context) {
+                                    const bpm = context.parsed.y;
+                                    const source = context.raw.source;
+                                    return [
+                                        `BPM: ${bpm}`,
+                                        `Source: ${source}`
+                                    ];
+                                }
+                            }
+                        },
+                        zoom: {
+                            zoom: {
+                                wheel: {
+                                    enabled: true,
+                                    speed: 0.1
+                                },
+                                pinch: {
+                                    enabled: true
+                                },
+                                mode: 'x',
+                                onZoom: function({chart}) {
+                                    updatePointVisibility(chart);
+                                }
+                            },
+                            pan: {
+                                enabled: true,
+                                mode: 'x',
+                                onPan: function({chart}) {
+                                    updatePointVisibility(chart);
+                                }
+                            },
+                            limits: {
+                                x: {min: 'original', max: 'original'},
+                                y: {min: 'original', max: 'original'}
+                            }
+                        },
+                        annotation: {
+                            annotations: annotations
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'time',
+                            time: {
+                                unit: 'hour',
+                                displayFormats: {
+                                    hour: 'MMM d, HH:mm',
+                                    day: 'MMM d'
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Date & Time',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Heart Rate (BPM)',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            },
+                            beginAtZero: false,
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            document.getElementById('chartControls').style.display = 'block';
+            
+            // Add momentum scrolling
+            addMomentumScrolling(heartRateChart);
+        }
+
+        // ===== MOMENTUM SCROLLING FUNCTIONALITY =====
+        
+        function addMomentumScrolling(chart) {
+            const canvas = chart.canvas;
+            let isDragging = false;
+            let lastX = 0;
+            let lastTime = 0;
+            let velocityX = 0;
+            let animationId = null;
+
+            // Track mouse/touch movements
+            canvas.addEventListener('mousedown', startDrag);
+            canvas.addEventListener('touchstart', startDrag);
+
+            function startDrag(e) {
+                isDragging = true;
+                const pos = getEventPosition(e);
+                lastX = pos.x;
+                lastTime = Date.now();
+                velocityX = 0;
+                
+                // Cancel any ongoing momentum animation
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+            }
+
+            canvas.addEventListener('mousemove', onDrag);
+            canvas.addEventListener('touchmove', onDrag);
+
+            function onDrag(e) {
+                if (!isDragging) return;
+                
+                const pos = getEventPosition(e);
+                const currentTime = Date.now();
+                const deltaX = pos.x - lastX;
+                const deltaTime = currentTime - lastTime;
+                
+                if (deltaTime > 0) {
+                    velocityX = deltaX / deltaTime;
+                }
+                
+                lastX = pos.x;
+                lastTime = currentTime;
+            }
+
+            canvas.addEventListener('mouseup', endDrag);
+            canvas.addEventListener('mouseleave', endDrag);
+            canvas.addEventListener('touchend', endDrag);
+
+            function endDrag(e) {
+                if (!isDragging) return;
+                isDragging = false;
+                
+                // Start momentum animation if velocity is significant
+                if (Math.abs(velocityX) > 0.1) {
+                    startMomentum();
+                }
+            }
+
+            function getEventPosition(e) {
+                const rect = canvas.getBoundingClientRect();
+                if (e.touches && e.touches.length > 0) {
+                    return {
+                        x: e.touches[0].clientX - rect.left,
+                        y: e.touches[0].clientY - rect.top
+                    };
+                }
+                return {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+            }
+
+            function startMomentum() {
+                const friction = 0.85; // Adjusted for faster stop (was 0.95)
+                const minVelocity = 0.01; // Minimum velocity before stopping
+                
+                function animate() {
+                    if (Math.abs(velocityX) < minVelocity) {
+                        animationId = null;
+                        return;
+                    }
+                    
+                    // Apply friction
+                    velocityX *= friction;
+                    
+                    // Calculate pan amount
+                    const xScale = chart.scales.x;
+                    const panAmount = velocityX * (xScale.max - xScale.min) * 0.05;
+                    
+                    // Pan the chart
+                    const newMin = xScale.min - panAmount;
+                    const newMax = xScale.max - panAmount;
+                    
+                    // Get original limits
+                    const originalMin = xScale.options.min === 'original' ? 
+                        chart.options.scales.x.min : xScale.options.min;
+                    const originalMax = xScale.options.max === 'original' ? 
+                        chart.options.scales.x.max : xScale.options.max;
+                    
+                    // Check bounds
+                    const dataMin = Math.min(...chart.data.datasets[0].data.map(d => d.x.getTime()));
+                    const dataMax = Math.max(...chart.data.datasets[0].data.map(d => d.x.getTime()));
+                    
+                    // Apply bounds and stop if we hit the edge
+                    if (newMin < dataMin || newMax > dataMax) {
+                        velocityX = 0;
+                        animationId = null;
+                        return;
+                    }
+                    
+                    // Update chart
+                    chart.zoomScale('x', { min: newMin, max: newMax }, 'none');
+                    updatePointVisibility(chart);
+                    
+                    // Continue animation
+                    animationId = requestAnimationFrame(animate);
+                }
+                
+                animate();
+            }
+        }
+
+        function updatePointVisibility(chart) {
+            const xScale = chart.scales.x;
+            const xRange = xScale.max - xScale.min;
+            const originalRange = xScale.options.max - xScale.options.min;
+            const zoomLevel = originalRange / xRange;
+
+            // Show points when zoomed in to about 1/3 of original view or more
+            if (zoomLevel > 3) {
+                chart.data.datasets[0].pointRadius = 3;
+            } else {
+                chart.data.datasets[0].pointRadius = 0;
+            }
+            chart.update('none');
+        }
+
+        function resetZoom() {
+            if (heartRateChart) {
+                heartRateChart.resetZoom();
+                updatePointVisibility(heartRateChart);
+            }
+        }
+
+        // ===== SLEEP FUNCTIONS =====
+
+        function secondsToHoursMinutes(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            return `${hours}h ${minutes}m`;
+        }
+
+        function formatTime(isoString) {
+            const date = new Date(isoString);
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            return `${hours}:${minutes}`;
+        }
+
+        function formatDate(isoString) {
+            const date = new Date(isoString);
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            return date.toLocaleDateString('en-US', options);
+        }
+
+        function parseSleepCSV(text) {
+            const lines = text.trim().split('\n');
+            const headers = lines[0].split(';');
+            const data = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(';');
+                const row = {};
+                headers.forEach((header, index) => {
+                    row[header] = values[index];
+                });
+                data.push(row);
+            }
+
+            return data;
+        }
+
+        function displaySleepDay() {
+            if (sleepData.length === 0) return;
+
+            const day = sleepData[currentSleepIndex];
+
+            document.getElementById('dateDisplay').textContent = formatDate(day.day);
+            document.getElementById('avgBreath').textContent = parseFloat(day.average_breath).toFixed(1);
+            document.getElementById('avgHeartRate').textContent = parseFloat(day.average_heart_rate).toFixed(0);
+            document.getElementById('lowestHeartRate').textContent = day.lowest_heart_rate;
+
+            document.getElementById('bedtimeStart').textContent = formatTime(day.bedtime_start);
+            document.getElementById('bedtimeEnd').textContent = formatTime(day.bedtime_end);
+            document.getElementById('timeInBed').textContent = secondsToHoursMinutes(parseInt(day.time_in_bed));
+            document.getElementById('totalSleep').textContent = secondsToHoursMinutes(parseInt(day.total_sleep_duration));
+
+            const totalSleep = parseInt(day.total_sleep_duration);
+            const deepSleep = parseInt(day.deep_sleep_duration);
+            const remSleep = parseInt(day.rem_sleep_duration);
+            const lightSleep = parseInt(day.light_sleep_duration);
+
+            document.getElementById('deepSleep').textContent = secondsToHoursMinutes(deepSleep);
+            document.getElementById('deepPercent').textContent = Math.round((deepSleep / totalSleep) * 100) + '%';
+
+            document.getElementById('remSleep').textContent = secondsToHoursMinutes(remSleep);
+            document.getElementById('remPercent').textContent = Math.round((remSleep / totalSleep) * 100) + '%';
+
+            document.getElementById('lightSleep').textContent = secondsToHoursMinutes(lightSleep);
+            document.getElementById('lightPercent').textContent = Math.round((lightSleep / totalSleep) * 100) + '%';
+
+            document.getElementById('prevBtn').disabled = currentSleepIndex === 0;
+            document.getElementById('nextBtn').disabled = currentSleepIndex === sleepData.length - 1;
+
+            // Calculate and display sleep debt
+            calculateSleepDebt();
+        }
+
+        function calculateSleepDebt() {
+            // Get the last 7 days of sleep data (or fewer if less than 7 days available)
+            const last7Days = sleepData.slice(-7);
+            
+            if (last7Days.length === 0) return;
+
+            // Calculate average sleep duration in seconds
+            let totalSleepSeconds = 0;
+            last7Days.forEach(day => {
+                totalSleepSeconds += parseInt(day.total_sleep_duration);
+            });
+
+            const avgSleepSeconds = totalSleepSeconds / last7Days.length;
+            const avgSleepHours = avgSleepSeconds / 3600;
+
+            // Target is 8 hours per night
+            const targetHours = 8;
+            
+            // Only show sleep debt if average is less than 8 hours
+            if (avgSleepHours < targetHours) {
+                const debtSeconds = (targetHours - avgSleepHours) * 3600;
+                const debtHours = Math.floor(debtSeconds / 3600);
+                const debtMinutes = Math.floor((debtSeconds % 3600) / 60);
+                
+                document.getElementById('sleepDebt').textContent = `${debtHours}h ${debtMinutes}m`;
+                document.getElementById('sleepDebtCard').style.display = 'block';
+            } else {
+                document.getElementById('sleepDebtCard').style.display = 'none';
+            }
+        }
+
+        function previousDay() {
+            if (currentSleepIndex > 0) {
+                currentSleepIndex--;
+                displaySleepDay();
+            }
+        }
+
+        function nextDay() {
+            if (currentSleepIndex < sleepData.length - 1) {
+                currentSleepIndex++;
+                displaySleepDay();
+            }
+        }
+
+        // ===== FILE UPLOAD HANDLERS =====
+
+        document.getElementById('heartrateFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('heartrateFileName').textContent = `Selected: ${file.name}`;
+            document.getElementById('heartrateError').classList.remove('active');
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const csvText = event.target.result;
+                    const data = parseHeartRateCSV(csvText);
+                    const chartData = processHeartRateData(data);
+
+                    if (chartData.length === 0) {
+                        throw new Error('No valid heart rate data found in CSV');
+                    }
+
+                    displayHeartRateStats(chartData);
+                    createHeartRateChart(chartData);
+                    document.getElementById('heartRateSection').classList.add('active');
+                } catch (error) {
+                    document.getElementById('heartrateError').textContent = `Error: ${error.message}`;
+                    document.getElementById('heartrateError').classList.add('active');
+                    console.error('Heart rate CSV parsing error:', error);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById('sleepFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('sleepFileName').textContent = `Selected: ${file.name}`;
+            document.getElementById('sleepError').classList.remove('active');
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                try {
+                    const csvText = event.target.result;
+                    sleepData = parseSleepCSV(csvText);
+
+                    sleepData.sort((a, b) => new Date(a.day) - new Date(b.day));
+                    sleepData = sleepData.slice(-10);
+
+                    if (sleepData.length === 0) {
+                        throw new Error('No valid sleep data found in CSV');
+                    }
+
+                    currentSleepIndex = sleepData.length - 1;
+                    displaySleepDay();
+                    document.getElementById('sleepSection').classList.add('active');
+                } catch (error) {
+                    document.getElementById('sleepError').textContent = `Error: ${error.message}`;
+                    document.getElementById('sleepError').classList.add('active');
+                    console.error('Sleep CSV parsing error:', error);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // ===== HELPER FUNCTIONS FOR PROCESSING FILES =====
+
+        function processHeartRateFile(csvText) {
+            const data = parseHeartRateCSV(csvText);
+            const chartData = processHeartRateData(data);
+
+            if (chartData.length === 0) {
+                throw new Error('No valid heart rate data found in CSV');
+            }
+
+            displayHeartRateStats(chartData);
+            createHeartRateChart(chartData);
+            document.getElementById('heartRateSection').classList.add('active');
+        }
+
+        function processSleepFile(csvText) {
+            sleepData = parseSleepCSV(csvText);
+
+            sleepData.sort((a, b) => new Date(a.day) - new Date(b.day));
+            sleepData = sleepData.slice(-10);
+
+            if (sleepData.length === 0) {
+                throw new Error('No valid sleep data found in CSV');
+            }
+
+            currentSleepIndex = sleepData.length - 1;
+            displaySleepDay();
+            document.getElementById('sleepSection').classList.add('active');
+        }
+
+        // ===== ZIP FILE UPLOAD HANDLER =====
+
+        document.getElementById('zipFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('zipFileName').textContent = `Selected: ${file.name}`;
+            document.getElementById('zipError').classList.remove('active');
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                JSZip.loadAsync(event.target.result)
+                    .then(function(zip) {
+                        // Look for heartrate.csv and sleepmodel.csv in App Data folder
+                        const heartrateFile = zip.file('App Data/heartrate.csv');
+                        const sleepFile = zip.file('App Data/sleepmodel.csv');
+
+                        if (!heartrateFile && !sleepFile) {
+                            throw new Error('Could not find heartrate.csv or sleepmodel.csv in App Data folder');
+                        }
+
+                        const promises = [];
+
+                        // Process heart rate file if found
+                        if (heartrateFile) {
+                            promises.push(
+                                heartrateFile.async('string').then(function(content) {
+                                    try {
+                                        processHeartRateFile(content);
+                                        document.getElementById('heartrateFileName').textContent = 'Loaded from ZIP: heartrate.csv';
+                                    } catch (error) {
+                                        console.error('Error processing heart rate from ZIP:', error);
+                                        document.getElementById('heartrateError').textContent = `Heart Rate Error: ${error.message}`;
+                                        document.getElementById('heartrateError').classList.add('active');
+                                    }
+                                })
+                            );
+                        }
+
+                        // Process sleep file if found
+                        if (sleepFile) {
+                            promises.push(
+                                sleepFile.async('string').then(function(content) {
+                                    try {
+                                        processSleepFile(content);
+                                        document.getElementById('sleepFileName').textContent = 'Loaded from ZIP: sleepmodel.csv';
+                                    } catch (error) {
+                                        console.error('Error processing sleep data from ZIP:', error);
+                                        document.getElementById('sleepError').textContent = `Sleep Error: ${error.message}`;
+                                        document.getElementById('sleepError').classList.add('active');
+                                    }
+                                })
+                            );
+                        }
+
+                        return Promise.all(promises);
+                    })
+                    .then(function() {
+                        console.log('ZIP file processed successfully');
+                    })
+                    .catch(function(error) {
+                        document.getElementById('zipError').textContent = `Error: ${error.message}`;
+                        document.getElementById('zipError').classList.add('active');
+                        console.error('ZIP parsing error:', error);
+                    });
+            };
+            reader.readAsArrayBuffer(file);
+        });
+
+        // Keyboard navigation for sleep data
+        document.addEventListener('keydown', function(e) {
+            if (sleepData.length === 0) return;
+            
+            if (e.key === 'ArrowLeft') {
+                previousDay();
+            } else if (e.key === 'ArrowRight') {
+                nextDay();
+            }
+        });
+    </script>
+</body>
+</html>
