@@ -9,6 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -94,7 +95,7 @@
 
         @media (min-width: 768px) {
             .upload-grid {
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: 1fr 1fr 1fr;
                 gap: 30px;
             }
         }
@@ -680,14 +681,14 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>💓 Health Data Tracker 💤</h1>
+            <h1>ðŸ’“ Health Data Tracker ðŸ’¤</h1>
             <p>Monitor your heart rate and sleep patterns</p>
         </div>
 
         <div class="upload-section">
             <div class="upload-grid">
                 <div class="upload-box">
-                    <div class="upload-icon">💓</div>
+                    <div class="upload-icon">ðŸ’“</div>
                     <h3>Heart Rate Data</h3>
                     <input type="file" id="heartrateFile" accept=".csv">
                     <label for="heartrateFile" class="upload-button">
@@ -698,7 +699,7 @@
                 </div>
 
                 <div class="upload-box">
-                    <div class="upload-icon">💤</div>
+                    <div class="upload-icon">ðŸ’¤</div>
                     <h3>Sleep Data</h3>
                     <input type="file" id="sleepFile" accept=".csv">
                     <label for="sleepFile" class="upload-button">
@@ -707,17 +708,28 @@
                     <div class="file-name" id="sleepFileName"></div>
                     <div class="error-message" id="sleepError"></div>
                 </div>
+
+                <div class="upload-box">
+                    <div class="upload-icon">ðŸ“¦</div>
+                    <h3>Upload ZIP File</h3>
+                    <input type="file" id="zipFile" accept=".zip">
+                    <label for="zipFile" class="upload-button">
+                        Choose ZIP File
+                    </label>
+                    <div class="file-name" id="zipFileName"></div>
+                    <div class="error-message" id="zipError"></div>
+                </div>
             </div>
         </div>
 
         <!-- Heart Rate Section -->
         <div class="heart-rate-section" id="heartRateSection">
-            <h2 class="section-title">Heart Rate - Last 5 Days</h2>
+            <h2 class="section-title">Heart Rate - Last 7 Days</h2>
             
             <div class="stats-section" id="heartRateStats"></div>
 
             <div class="chart-controls" id="chartControls" style="display: none;">
-                <p>Scroll to zoom • Drag to pan</p>
+                <p>Scroll to zoom â€¢ Drag to pan</p>
                 <button class="reset-zoom-btn" onclick="resetZoom()">Reset Zoom</button>
             </div>
 
@@ -728,12 +740,12 @@
 
         <!-- Sleep Section -->
         <div class="sleep-section" id="sleepSection">
-            <h2 class="section-title">Sleep Analysis</h2>
+            <h2 class="section-title">Sleep Analysis (Last 10 Days)</h2>
 
             <div class="navigation">
-                <button class="nav-button" id="prevBtn" onclick="previousDay()">← Previous</button>
+                <button class="nav-button" id="prevBtn" onclick="previousDay()">â† Previous</button>
                 <div class="date-display" id="dateDisplay"></div>
-                <button class="nav-button" id="nextBtn" onclick="nextDay()">Next →</button>
+                <button class="nav-button" id="nextBtn" onclick="nextDay()">Next â†’</button>
             </div>
 
             <div class="metrics-grid">
@@ -767,25 +779,31 @@
                 </div>
             </div>
 
+            <div class="time-card" id="sleepDebtCard" style="margin-top: 20px; display: none;">
+                <h3>Sleep Debt (7-Day Average)</h3>
+                <div class="time" id="sleepDebt" style="color: #e53e3e;">--</div>
+                <div style="font-size: 12px; color: #999; margin-top: 5px;">Below 8h/night target</div>
+            </div>
+
             <div class="sleep-stages" style="margin-top: 30px;">
                 <div class="sleep-stages-inner">
                     <h2>Sleep Stages</h2>
                     <div class="stage-row">
-                        <div class="stage-name">🌊 Deep Sleep</div>
+                        <div class="stage-name">ðŸŒŠ Deep Sleep</div>
                         <div class="stage-value">
                             <span class="stage-time" id="deepSleep">--</span>
                             <span class="stage-percentage" id="deepPercent">--%</span>
                         </div>
                     </div>
                     <div class="stage-row">
-                        <div class="stage-name">💭 REM Sleep</div>
+                        <div class="stage-name">ðŸ’­ REM Sleep</div>
                         <div class="stage-value">
                             <span class="stage-time" id="remSleep">--</span>
                             <span class="stage-percentage" id="remPercent">--%</span>
                         </div>
                     </div>
                     <div class="stage-row">
-                        <div class="stage-name">☁️ Light Sleep</div>
+                        <div class="stage-name">â˜ï¸ Light Sleep</div>
                         <div class="stage-value">
                             <span class="stage-time" id="lightSleep">--</span>
                             <span class="stage-percentage" id="lightPercent">--%</span>
@@ -826,11 +844,11 @@
         function processHeartRateData(data) {
             const chartData = [];
             const now = new Date();
-            const fiveDaysAgo = new Date(now.getTime() - (5 * 24 * 60 * 60 * 1000));
+            const sevenDaysAgo = new Date(now.getTime() - (7 * 24 * 60 * 60 * 1000));
 
             data.forEach(row => {
                 const timestamp = new Date(row['timestamp']);
-                if (timestamp >= fiveDaysAgo && timestamp <= now) {
+                if (timestamp >= sevenDaysAgo && timestamp <= now) {
                     const bpm = parseFloat(row['bpm']);
                     if (!isNaN(bpm) && bpm > 0) {
                         chartData.push({
@@ -1123,6 +1141,134 @@
             });
 
             document.getElementById('chartControls').style.display = 'block';
+            
+            // Add momentum scrolling
+            addMomentumScrolling(heartRateChart);
+        }
+
+        // ===== MOMENTUM SCROLLING FUNCTIONALITY =====
+        
+        function addMomentumScrolling(chart) {
+            const canvas = chart.canvas;
+            let isDragging = false;
+            let lastX = 0;
+            let lastTime = 0;
+            let velocityX = 0;
+            let animationId = null;
+
+            // Track mouse/touch movements
+            canvas.addEventListener('mousedown', startDrag);
+            canvas.addEventListener('touchstart', startDrag);
+
+            function startDrag(e) {
+                isDragging = true;
+                const pos = getEventPosition(e);
+                lastX = pos.x;
+                lastTime = Date.now();
+                velocityX = 0;
+                
+                // Cancel any ongoing momentum animation
+                if (animationId) {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                }
+            }
+
+            canvas.addEventListener('mousemove', onDrag);
+            canvas.addEventListener('touchmove', onDrag);
+
+            function onDrag(e) {
+                if (!isDragging) return;
+                
+                const pos = getEventPosition(e);
+                const currentTime = Date.now();
+                const deltaX = pos.x - lastX;
+                const deltaTime = currentTime - lastTime;
+                
+                if (deltaTime > 0) {
+                    velocityX = deltaX / deltaTime;
+                }
+                
+                lastX = pos.x;
+                lastTime = currentTime;
+            }
+
+            canvas.addEventListener('mouseup', endDrag);
+            canvas.addEventListener('mouseleave', endDrag);
+            canvas.addEventListener('touchend', endDrag);
+
+            function endDrag(e) {
+                if (!isDragging) return;
+                isDragging = false;
+                
+                // Start momentum animation if velocity is significant
+                if (Math.abs(velocityX) > 0.1) {
+                    startMomentum();
+                }
+            }
+
+            function getEventPosition(e) {
+                const rect = canvas.getBoundingClientRect();
+                if (e.touches && e.touches.length > 0) {
+                    return {
+                        x: e.touches[0].clientX - rect.left,
+                        y: e.touches[0].clientY - rect.top
+                    };
+                }
+                return {
+                    x: e.clientX - rect.left,
+                    y: e.clientY - rect.top
+                };
+            }
+
+            function startMomentum() {
+                const friction = 0.85; // Adjusted for faster stop (was 0.95)
+                const minVelocity = 0.01; // Minimum velocity before stopping
+                
+                function animate() {
+                    if (Math.abs(velocityX) < minVelocity) {
+                        animationId = null;
+                        return;
+                    }
+                    
+                    // Apply friction
+                    velocityX *= friction;
+                    
+                    // Calculate pan amount
+                    const xScale = chart.scales.x;
+                    const panAmount = velocityX * (xScale.max - xScale.min) * 0.05;
+                    
+                    // Pan the chart
+                    const newMin = xScale.min - panAmount;
+                    const newMax = xScale.max - panAmount;
+                    
+                    // Get original limits
+                    const originalMin = xScale.options.min === 'original' ? 
+                        chart.options.scales.x.min : xScale.options.min;
+                    const originalMax = xScale.options.max === 'original' ? 
+                        chart.options.scales.x.max : xScale.options.max;
+                    
+                    // Check bounds
+                    const dataMin = Math.min(...chart.data.datasets[0].data.map(d => d.x.getTime()));
+                    const dataMax = Math.max(...chart.data.datasets[0].data.map(d => d.x.getTime()));
+                    
+                    // Apply bounds and stop if we hit the edge
+                    if (newMin < dataMin || newMax > dataMax) {
+                        velocityX = 0;
+                        animationId = null;
+                        return;
+                    }
+                    
+                    // Update chart
+                    chart.zoomScale('x', { min: newMin, max: newMax }, 'none');
+                    updatePointVisibility(chart);
+                    
+                    // Continue animation
+                    animationId = requestAnimationFrame(animate);
+                }
+                
+                animate();
+            }
         }
 
         function updatePointVisibility(chart) {
@@ -1216,6 +1362,40 @@
 
             document.getElementById('prevBtn').disabled = currentSleepIndex === 0;
             document.getElementById('nextBtn').disabled = currentSleepIndex === sleepData.length - 1;
+
+            // Calculate and display sleep debt
+            calculateSleepDebt();
+        }
+
+        function calculateSleepDebt() {
+            // Get the last 7 days of sleep data (or fewer if less than 7 days available)
+            const last7Days = sleepData.slice(-7);
+            
+            if (last7Days.length === 0) return;
+
+            // Calculate average sleep duration in seconds
+            let totalSleepSeconds = 0;
+            last7Days.forEach(day => {
+                totalSleepSeconds += parseInt(day.total_sleep_duration);
+            });
+
+            const avgSleepSeconds = totalSleepSeconds / last7Days.length;
+            const avgSleepHours = avgSleepSeconds / 3600;
+
+            // Target is 8 hours per night
+            const targetHours = 8;
+            
+            // Only show sleep debt if average is less than 8 hours
+            if (avgSleepHours < targetHours) {
+                const debtSeconds = (targetHours - avgSleepHours) * 3600;
+                const debtHours = Math.floor(debtSeconds / 3600);
+                const debtMinutes = Math.floor((debtSeconds % 3600) / 60);
+                
+                document.getElementById('sleepDebt').textContent = `${debtHours}h ${debtMinutes}m`;
+                document.getElementById('sleepDebtCard').style.display = 'block';
+            } else {
+                document.getElementById('sleepDebtCard').style.display = 'none';
+            }
         }
 
         function previousDay() {
@@ -1278,7 +1458,7 @@
                     sleepData = parseSleepCSV(csvText);
 
                     sleepData.sort((a, b) => new Date(a.day) - new Date(b.day));
-                    sleepData = sleepData.slice(-5);
+                    sleepData = sleepData.slice(-10);
 
                     if (sleepData.length === 0) {
                         throw new Error('No valid sleep data found in CSV');
@@ -1294,6 +1474,105 @@
                 }
             };
             reader.readAsText(file);
+        });
+
+        // ===== HELPER FUNCTIONS FOR PROCESSING FILES =====
+
+        function processHeartRateFile(csvText) {
+            const data = parseHeartRateCSV(csvText);
+            const chartData = processHeartRateData(data);
+
+            if (chartData.length === 0) {
+                throw new Error('No valid heart rate data found in CSV');
+            }
+
+            displayHeartRateStats(chartData);
+            createHeartRateChart(chartData);
+            document.getElementById('heartRateSection').classList.add('active');
+        }
+
+        function processSleepFile(csvText) {
+            sleepData = parseSleepCSV(csvText);
+
+            sleepData.sort((a, b) => new Date(a.day) - new Date(b.day));
+            sleepData = sleepData.slice(-10);
+
+            if (sleepData.length === 0) {
+                throw new Error('No valid sleep data found in CSV');
+            }
+
+            currentSleepIndex = sleepData.length - 1;
+            displaySleepDay();
+            document.getElementById('sleepSection').classList.add('active');
+        }
+
+        // ===== ZIP FILE UPLOAD HANDLER =====
+
+        document.getElementById('zipFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('zipFileName').textContent = `Selected: ${file.name}`;
+            document.getElementById('zipError').classList.remove('active');
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                JSZip.loadAsync(event.target.result)
+                    .then(function(zip) {
+                        // Look for heartrate.csv and sleepmodel.csv in App Data folder
+                        const heartrateFile = zip.file('App Data/heartrate.csv');
+                        const sleepFile = zip.file('App Data/sleepmodel.csv');
+
+                        if (!heartrateFile && !sleepFile) {
+                            throw new Error('Could not find heartrate.csv or sleepmodel.csv in App Data folder');
+                        }
+
+                        const promises = [];
+
+                        // Process heart rate file if found
+                        if (heartrateFile) {
+                            promises.push(
+                                heartrateFile.async('string').then(function(content) {
+                                    try {
+                                        processHeartRateFile(content);
+                                        document.getElementById('heartrateFileName').textContent = 'Loaded from ZIP: heartrate.csv';
+                                    } catch (error) {
+                                        console.error('Error processing heart rate from ZIP:', error);
+                                        document.getElementById('heartrateError').textContent = `Heart Rate Error: ${error.message}`;
+                                        document.getElementById('heartrateError').classList.add('active');
+                                    }
+                                })
+                            );
+                        }
+
+                        // Process sleep file if found
+                        if (sleepFile) {
+                            promises.push(
+                                sleepFile.async('string').then(function(content) {
+                                    try {
+                                        processSleepFile(content);
+                                        document.getElementById('sleepFileName').textContent = 'Loaded from ZIP: sleepmodel.csv';
+                                    } catch (error) {
+                                        console.error('Error processing sleep data from ZIP:', error);
+                                        document.getElementById('sleepError').textContent = `Sleep Error: ${error.message}`;
+                                        document.getElementById('sleepError').classList.add('active');
+                                    }
+                                })
+                            );
+                        }
+
+                        return Promise.all(promises);
+                    })
+                    .then(function() {
+                        console.log('ZIP file processed successfully');
+                    })
+                    .catch(function(error) {
+                        document.getElementById('zipError').textContent = `Error: ${error.message}`;
+                        document.getElementById('zipError').classList.add('active');
+                        console.error('ZIP parsing error:', error);
+                    });
+            };
+            reader.readAsArrayBuffer(file);
         });
 
         // Keyboard navigation for sleep data
