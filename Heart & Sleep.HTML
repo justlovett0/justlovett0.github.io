@@ -720,6 +720,14 @@
                     <div class="error-message" id="zipError"></div>
                 </div>
             </div>
+
+            <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; border: 1px solid #ffc107;">
+                <p style="margin: 0; color: #856404; font-size: 14px;">
+                    <strong>ðŸ“ How to get your data:</strong> Go to 
+                    <a href="https://membership.ouraring.com/data-export" target="_blank" style="color: #667eea;">Oura Cloud</a>
+                    â†’ Request Data Export â†’ Download ZIP â†’ Upload here
+                </p>
+            </div>
         </div>
 
         <!-- Heart Rate Section -->
@@ -781,7 +789,7 @@
 
             <div class="time-card" id="sleepDebtCard" style="margin-top: 20px; display: none;">
                 <h3>Sleep Debt (7-Day Average)</h3>
-                <div class="time" id="sleepDebt" style="color: #e53e3e;">--</div>
+                <div class="time" id="sleepDebt">--</div>
                 <div style="font-size: 12px; color: #999; margin-top: 5px;">Below 8h/night target</div>
             </div>
 
@@ -1391,7 +1399,21 @@
                 const debtHours = Math.floor(debtSeconds / 3600);
                 const debtMinutes = Math.floor((debtSeconds % 3600) / 60);
                 
+                // Calculate total debt in hours for color determination
+                const totalDebtHours = debtSeconds / 3600;
+                
+                // Set color based on sleep debt thresholds
+                let debtColor;
+                if (totalDebtHours < 1) {
+                    debtColor = '#006400'; // Dark green
+                } else if (totalDebtHours >= 1 && totalDebtHours <= 3) {
+                    debtColor = '#B8860B'; // Deep yellow (dark goldenrod)
+                } else {
+                    debtColor = '#CC5500'; // Dark orange
+                }
+                
                 document.getElementById('sleepDebt').textContent = `${debtHours}h ${debtMinutes}m`;
+                document.getElementById('sleepDebt').style.color = debtColor;
                 document.getElementById('sleepDebtCard').style.display = 'block';
             } else {
                 document.getElementById('sleepDebtCard').style.display = 'none';
