@@ -1379,16 +1379,25 @@
         function calculateSleepDebt() {
             // Get the last 7 days of sleep data (or fewer if less than 7 days available)
             const last7Days = sleepData.slice(-7);
-            
-            if (last7Days.length === 0) return;
 
-            // Calculate average sleep duration in seconds
+            // Ignore days without valid sleep data
+            const daysWithData = last7Days.filter(day => {
+                const val = parseInt(day.total_sleep_duration);
+                return !isNaN(val) && val > 0;
+            });
+
+            if (daysWithData.length === 0) {
+                document.getElementById('sleepDebtCard').style.display = 'none';
+                return;
+            }
+
+            // Calculate average sleep duration in seconds across valid days only
             let totalSleepSeconds = 0;
-            last7Days.forEach(day => {
+            daysWithData.forEach(day => {
                 totalSleepSeconds += parseInt(day.total_sleep_duration);
             });
 
-            const avgSleepSeconds = totalSleepSeconds / last7Days.length;
+            const avgSleepSeconds = totalSleepSeconds / daysWithData.length;
             const avgSleepHours = avgSleepSeconds / 3600;
 
             // Target is 8 hours per night
